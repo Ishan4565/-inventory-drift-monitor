@@ -2,8 +2,8 @@ import os
 import pandas as pd
 from sklearn.ensemble import GradientBoostingRegressor
 
-# We are skipping the get_db_engine function entirely to avoid connection errors
 def train_universal_model():
+    # Core ML logic remains untouched
     data = pd.DataFrame({
         'season_index': [1, 2, 3, 4, 1, 2, 3, 4],
         'temp': [15, 30, 10, -5, 18, 35, 8, -10],
@@ -26,8 +26,5 @@ def predict_and_log(product, season_name, temp, promo, past, actual_sales, model
     drift = abs(prediction - actual_sales) / (prediction + 1e-9)
     status = "Critical Drift" if drift > 0.2 else "Stable"
     
-    # DATABASE LOGGING REMOVED: 
-    # We no longer call to_sql. The app will just return the results to your UI.
-    print(f"Analysis Complete for {product}: Prediction {prediction}, Drift {drift}")
-
+    # We are returning only the ML results to the Streamlit UI
     return prediction, drift
