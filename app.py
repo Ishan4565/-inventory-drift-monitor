@@ -5,15 +5,13 @@ from datetime import datetime, timedelta
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import plotly.graph_objects as go
-from scipy import stats
-import os
 
 st.set_page_config(page_title="Inventory Drift Monitor", layout="wide", page_icon="🛍️")
 
-# --- DATABASE LOGIC REMOVED FOR STABILITY ---
+# --- CORE LOGIC FUNCTIONS ---
 
 def get_mock_historical_data(product_name, season, days=90):
-    """Generates data in memory instead of using PostgreSQL"""
+    """Generates data in memory instead of using a database"""
     np.random.seed(hash(product_name + season) % (2**32))
     
     season_multipliers = {
@@ -24,7 +22,6 @@ def get_mock_historical_data(product_name, season, days=90):
     }
     
     base_sales = {'Jackets': 150, 'Gloves': 200, 'Boots': 120, 'Scarves': 180}
-    
     data = []
     start_date = datetime.now() - timedelta(days=days)
     base = base_sales.get(product_name, 100)
@@ -46,31 +43,54 @@ def get_mock_historical_data(product_name, season, days=90):
             'has_promotion': np.random.random() < 0.2,
             'month': current_date.month
         })
-    
     return pd.DataFrame(data)
 
-def calculate_drift_metrics(historical_sales, current_sales, historical_temp, current_temp):
+def train_forecasting_model(historical_df):
+    """Trains the Random Forest model and returns metrics"""
+    X = historical_df[['temperature', 'day_of_week', 'is_weekend', 'is_holiday', 'has_promotion', 'month']].astype(float)
+    y = historical_df['sales']
+    
+    model = RandomForestRegressor(n_estimators=50, max_depth=8, random_state=42)
+    model.fit(X, y)
+    
+    predictions = model.predict(X)
+    
+    # FIXED: Added the missing closing parenthesis below
+    return model, {
+        'MAE': mean_absolute_error(y, predictions),
+        'RMSE': np.sqrt(mean_squared_error(y, predictions)),
+        'R2': r2_score(y, predictions)
+    }
+
+def calculate_drift_metrics(historical_sales, current_sales):
+    """Calculates statistical drift scores"""
     hist_mean = np.mean(historical_sales)
     hist_std = np.std(historical_sales)
     z_score = (current_sales - hist_mean) / hist_std if hist_std > 0 else 0
-    
-    # Simple Drift Score calculation
-    drift_score = abs(z_score) * 10 
-    
     return {
         'z_score': z_score,
-        'drift_score': drift_score,
+        'drift_score': abs(z_score) * 10,
         'historical_mean': hist_mean,
-        'historical_std': hist_std,
         'is_anomaly': abs(z_score) > 2
     }
 
-def train_forecasting_model(historical_df):
-    X = historical_df[['temperature', 'day_of_week', 'is_weekend', 'is_holiday', 'has_promotion', 'month']].astype(float)
-    y = historical_df['sales']
-    model = RandomForestRegressor(n_estimators=50, max_depth=8, random_state=42)
-    model.fit(X, y)
-    predictions = model.predict(X)
-    return model, {
-        'MAE': mean_absolute_error(y, predictions),
-        'RMSE': np.sqrt(mean_squared_error(y
+# --- MAIN APP UI ---
+
+def main():
+    st.title("🛍️ ML Inventory & Drift Monitor")
+    st.success("🚀 System running in High-Stability Mode")
+    
+    with st.sidebar:
+        st.header("Settings")
+        product = st.selectbox("Select Product", ["Jackets", "Gloves", "Boots", "Scarves"])
+        season = st.radio("Season", ["Spring", "Summer", "Fall", "Winter"])
+        
+    col1, col2 = st.columns(2)
+    with col1:
+        avg_temp = st.number_input("Average Temp (°C)", value=15)
+        actual_sales_today = st.number_input("Actual Sales (Today)", value=450)
+    with col2:
+        active_promotion = st.checkbox("Active Promotion", value=False)
+        st.info("The model will use these inputs to detect drift against historical patterns.")
+    
+    if
