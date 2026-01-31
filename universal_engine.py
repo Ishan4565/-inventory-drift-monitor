@@ -1,17 +1,8 @@
 import os
 import pandas as pd
-from sqlalchemy import create_engine
 from sklearn.ensemble import GradientBoostingRegressor
 
-def get_db_engine():
-    # Using the EXTERNAL URL with SSL forced
-    db_url = "postgresql://inventory_drift_db_user:Xf9BpwHH8zNTqmjap0W1bCLXKd3kUzni@dpg-d5uarfiqcgvc73asnf80-a.oregon-postgres.render.com/inventory_drift_db?sslmode=require"
-    
-    # Debug print for your Streamlit logs
-    print(f"DEBUG: Attempting to connect to: {db_url.split('@')[-1]}") 
-    
-    return create_engine(db_url)
-
+# We are skipping the get_db_engine function entirely to avoid connection errors
 def train_universal_model():
     data = pd.DataFrame({
         'season_index': [1, 2, 3, 4, 1, 2, 3, 4],
@@ -35,14 +26,8 @@ def predict_and_log(product, season_name, temp, promo, past, actual_sales, model
     drift = abs(prediction - actual_sales) / (prediction + 1e-9)
     status = "Critical Drift" if drift > 0.2 else "Stable"
     
-    # We call the engine RIGHT HERE so it uses the updated URL
-    engine = get_db_engine()
-    
-    result = pd.DataFrame([{
-        'product_name': product, 'season': season_name,
-        'predicted_demand': float(prediction), 'actual_demand': float(actual_sales),
-        'drift_score': float(drift), 'status': status
-    }])
-    
-    result.to_sql('inventory_monitor', engine, if_exists='append', index=False)
+    # DATABASE LOGGING REMOVED: 
+    # We no longer call to_sql. The app will just return the results to your UI.
+    print(f"Analysis Complete for {product}: Prediction {prediction}, Drift {drift}")
+
     return prediction, drift
