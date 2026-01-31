@@ -4,14 +4,12 @@ from sqlalchemy import create_engine
 from sklearn.ensemble import GradientBoostingRegressor
 
 def get_db_engine():
-    # FIXED: Using the EXTERNAL hostname so Streamlit Cloud can connect to Render
-    # We use 'dpg-d5uarfiqcgvc73asnf80-a.oregon-postgres.render.com' instead of the internal shorthand
+    # Using the EXTERNAL URL with SSL forced
     db_url = "postgresql://inventory_drift_db_user:Xf9BpwHH8zNTqmjap0W1bCLXKd3kUzni@dpg-d5uarfiqcgvc73asnf80-a.oregon-postgres.render.com/inventory_drift_db?sslmode=require"
     
-    # Ensure the dialect is correct for SQLAlchemy
-    if db_url.startswith("postgres://"):
-        db_url = db_url.replace("postgres://", "postgresql://", 1)
-        
+    # Debug print for your Streamlit logs
+    print(f"DEBUG: Attempting to connect to: {db_url.split('@')[-1]}") 
+    
     return create_engine(db_url)
 
 def train_universal_model():
@@ -37,14 +35,14 @@ def predict_and_log(product, season_name, temp, promo, past, actual_sales, model
     drift = abs(prediction - actual_sales) / (prediction + 1e-9)
     status = "Critical Drift" if drift > 0.2 else "Stable"
     
+    # We call the engine RIGHT HERE so it uses the updated URL
     engine = get_db_engine()
+    
     result = pd.DataFrame([{
         'product_name': product, 'season': season_name,
         'predicted_demand': float(prediction), 'actual_demand': float(actual_sales),
         'drift_score': float(drift), 'status': status
     }])
     
-    # This is where the magic happens - pushing to the external Render DB
     result.to_sql('inventory_monitor', engine, if_exists='append', index=False)
-
     return prediction, drift
