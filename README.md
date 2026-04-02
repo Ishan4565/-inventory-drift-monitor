@@ -223,7 +223,7 @@ if p_value < 0.05:  # Drift detected
 Found a bug? Have ideas? Want to discuss ML monitoring?
 
 - **Email:** ishandh454@gmail.com
-- **LinkedIn:** [Your LinkedIn]
+- **LinkedIn:** https://www.linkedin.com/in/ishan-dhakal-2b1933376/
 - **GitHub:** Ishan4565
 
 ---
